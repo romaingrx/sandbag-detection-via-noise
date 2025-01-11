@@ -144,12 +144,12 @@ def print_memory_usage():
 
 
 # Set device
-DEVICE_MAP_DEFAULT = "mps"
 device = "cpu"
 if t.backends.mps.is_available():
     device = "mps"
 if t.cuda.is_available():
     device = "cuda"
+DEVICE_MAP_DEFAULT = device
 
 print("Selected device: ", device)
 
