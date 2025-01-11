@@ -1,15 +1,11 @@
-
-
-import torch as t
 from tqdm import tqdm
+
 # import accelerate
 import config as cfg
 import init
 from exp_setup import ExpSetup
-import sys
-# import wandb
-import time
 
+# import wandb
 from src.main import construct_mask
 
 
@@ -43,7 +39,7 @@ def main():
     df = init.df
 
     if cfg.config["oneprompt"]:
-        df = df[df['Sandbag'] == 1]
+        df = df[df["Sandbag"] == 1]
 
     # Initialize the experimental setup
     exp = ExpSetup(init.model, init.tokenizer, init.data, cfg.config)
@@ -56,7 +52,7 @@ def main():
     sys_prompt = set_system_prompt(True, model=model_name)
     exp.init_model_input(sys_prompt, password=False)
 
-    exp_keys = ['Percentage', 'Noise Mean', 'Noise Std', 'Seed', 'Excluded Layer']
+    exp_keys = ["Percentage", "Noise Mean", "Noise Std", "Seed", "Excluded Layer"]
     exp_parameters = df.loc[0, exp_keys].to_dict()
     print(exp_parameters)
 
@@ -69,22 +65,30 @@ def main():
     # significant_h = lambda x: significant_layer_q(x, base_accuracy_honest, 0.03)
     # significant_d = lambda x: significant_layer_q(x, base_accuracy_deceptive, 0.03)
 
-
     # exclude_layers = []
     # relevant_layer_h = []
     # relevant_layer_d = []
     # important_q = False
     #
     # Loop over each experiment and fill measurements
-    with tqdm(total=df.shape[0], desc="Total Progress", bar_format='{l_bar}{bar:30}{r_bar}{bar:-30b}') as pbar:
+    with tqdm(
+        total=df.shape[0],
+        desc="Total Progress",
+        bar_format="{l_bar}{bar:30}{r_bar}{bar:-30b}",
+    ) as pbar:
         for idx, row in df[df["Sandbag"] == 0].iterrows():
-
-            exp_keys = ['Percentage', 'Noise Mean', 'Noise Std', 'Seed', 'Excluded Layer']
+            exp_keys = [
+                "Percentage",
+                "Noise Mean",
+                "Noise Std",
+                "Seed",
+                "Excluded Layer",
+            ]
             exp_parameters = {key: row[key] for key in exp_keys}
 
             # measure for honest prompt
             res_exp = exp.measure_accuracy(prompt_idx=0, **exp_parameters)
-            df.loc[idx, ['dt', 'Accuracy']] = res_exp
+            df.loc[idx, ["dt", "Accuracy"]] = res_exp
 
             # measure for sandbagging prompt
             res_exp = exp.measure_accuracy(prompt_idx=1, **exp_parameters)
@@ -92,12 +96,11 @@ def main():
             # mask for sandbag entry in data frame
             construct_mask(exp_parameters, df)
 
-            mask &= (df['Sandbag'] == 1)
+            mask &= df["Sandbag"] == 1
 
             # store values in data frame
-            df.loc[mask, ['dt', 'Accuracy']] = res_exp
+            df.loc[mask, ["dt", "Accuracy"]] = res_exp
             exp.reset_model()
-
 
             # Log the intermediate DataFrame periodically to temporary file
             if idx % 20 == 0:  # Adjust the frequency as needed
@@ -106,5 +109,3 @@ def main():
 
     write_csv(df)
     return None
-
-

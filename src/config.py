@@ -1,7 +1,8 @@
 import numpy as np
 
 # set hugging face token
-token_name = "token_philipp.txt"
+# token_name = os.getenv("HUGGINGFACE_TOKEN")
+# token_name = "~/.cache/huggingface/token"
 
 # Hugging face model ids
 model_ids = {
@@ -10,10 +11,10 @@ model_ids = {
     2: "meta-llama/Meta-Llama-3-8B-Instruct",
     3: "microsoft/Phi-3-small-128k-instruct",
     4: "meta-llama/Meta-Llama-3.1-70B-Instruct",
-    5: "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4"
+    5: "hugging-quants/Meta-Llama-3.1-70B-Instruct-AWQ-INT4",
 }
 
-model_id = model_ids[5]
+model_id = model_ids[2]
 
 # model name set for system prompt
 model_names = {
@@ -40,7 +41,7 @@ data_names = {
     2: "mod_WMDP_with_password",
     3: "saturated_tiny_AI2_formatted",
     4: "tiny_AI2_formatted",
-    5: "tiny_mmlu_formatted"
+    5: "tiny_mmlu_formatted",
 }
 
 data_file_name = data_names[4]
@@ -61,7 +62,7 @@ noise_stds = [0.00005]
 n_trials = 2
 
 # if seeds is not None n_trials is ignored
-seeds = None # [20835, 21961, 93864, 19432, 89776, 59063, 18980, 70387, 95077, 43441]
+seeds = None  # [20835, 21961, 93864, 19432, 89776, 59063, 18980, 70387, 95077, 43441]
 
 n_prompts = 2
 
@@ -72,8 +73,8 @@ sample_method = "greedy"  # or "multinomial"
 bias = False
 
 # Sets Oneprompt to T/F
-    # If True, currently only uses sandbagging prompt.
-    # To use non-sandbagging, change line 64 of init.py in init_df to 0
+# If True, currently only uses sandbagging prompt.
+# To use non-sandbagging, change line 64 of init.py in init_df to 0
 oneprompt = False
 
 # Set Password, None if no password
@@ -87,7 +88,7 @@ quiet = True
 verbose = 1  # integer 1 - 4, 1:few details 4:lot of details
 
 config = {
-    "token_name": token_name,
+    # "token_name": token_name,
     "data": data_file_name,
     "result_fname": result_fname,
     "model_id": model_id,

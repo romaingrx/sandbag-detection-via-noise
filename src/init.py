@@ -1,38 +1,33 @@
-import torch as t
-import os
-
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import requests
-import json
-import jsonlines
-import config as cfg
-import random
-import pandas as pd
-import numpy as np
 import itertools
+import os
+import random
+
+import jsonlines
+import numpy as np
+import pandas as pd
 import pynvml
-import sys
+import torch as t
+from transformers import AutoModelForCausalLM, AutoTokenizer
 
+import config as cfg
 
-if cfg.config['PEFT']:
+if cfg.config["PEFT"]:
     from peft import PeftModel
 
 # packages needed for Phi3
-if cfg.config['model_name'] == 'Phi':
+if cfg.config["model_name"] == "Phi":
     print("Importing modules for Phi3")
-    import tiktoken
-    import einops
-    import pytest
-    import triton
 
 import psutil
 
+
 def load_token(file_path):
     """Load Hugging Face token from token file."""
-    if 'COLAB_GPU' in os.environ:
+    if "COLAB_GPU" in os.environ:
         from google.colab import userdata
+
         try:
-            token = userdata.get('huggingface_token')
+            token = userdata.get("huggingface_token")
             print("Token loaded successfully from Google Colab")
             return token
 
@@ -46,7 +41,7 @@ def load_token(file_path):
             return None
 
     try:
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             token = file.read().strip()
             print("Token loaded successfully")
         return token
@@ -63,7 +58,14 @@ def init_df(**kwargs):
     columns for the measurements."""
 
     # input parameters of the experiment
-    columns_init = ['Sandbag', 'Percentage', 'Noise Mean', 'Noise Std', 'Seed', 'Excluded Layer']
+    columns_init = [
+        "Sandbag",
+        "Percentage",
+        "Noise Mean",
+        "Noise Std",
+        "Seed",
+        "Excluded Layer",
+    ]
 
     if cfg.config["oneprompt"]:
         sandbag = [1]  # Only include Sandbag = 1 if oneprompt is True
@@ -79,16 +81,22 @@ def init_df(**kwargs):
     elif isinstance(excluded_layers, (list, tuple)):
         pass
 
-
     # all parameter combinations for experiment
-    combinations = list(itertools.product(
-        sandbag, kwargs["percentages"], kwargs["noise_means"], kwargs["noise_stds"], kwargs["seeds"], excluded_layers
-    ))
+    combinations = list(
+        itertools.product(
+            sandbag,
+            kwargs["percentages"],
+            kwargs["noise_means"],
+            kwargs["noise_stds"],
+            kwargs["seeds"],
+            excluded_layers,
+        )
+    )
 
     df_0 = pd.DataFrame(combinations, columns=columns_init)
 
     # initialize values which will be measured with np.nan
-    columns_measure = ['dt', 'Accuracy']
+    columns_measure = ["dt", "Accuracy"]
     for col in columns_measure:
         df_0[col] = np.nan
 
@@ -101,31 +109,32 @@ def print_gpu_memory():
         return None
     pynvml.nvmlInit()
     device_count = pynvml.nvmlDeviceGetCount()
-    
+
     for i in range(device_count):
         handle = pynvml.nvmlDeviceGetHandleByIndex(i)
         mem_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-        
-        total_memory = mem_info.total / 1024 ** 2  # Convert bytes to MB
-        free_memory = mem_info.free / 1024 ** 2   # Convert bytes to MB
-        used_memory = mem_info.used / 1024 ** 2   # Convert bytes to MB
-        
+
+        total_memory = mem_info.total / 1024**2  # Convert bytes to MB
+        free_memory = mem_info.free / 1024**2  # Convert bytes to MB
+        used_memory = mem_info.used / 1024**2  # Convert bytes to MB
+
         print(f"GPU {i}:")
         print(f"  Total Memory: {total_memory:.2f} MB")
         print(f"  Free Memory: {free_memory:.2f} MB")
         print(f"  Used Memory: {used_memory:.2f} MB")
-    
+
     pynvml.nvmlShutdown()
+
 
 def print_memory_usage():
     # Get the memory usage in bytes
     memory_info = psutil.virtual_memory()
 
     # Convert to MB
-    total_memory = memory_info.total / (1024 ** 2)
-    available_memory = memory_info.available / (1024 ** 2)
-    used_memory = memory_info.used / (1024 ** 2)
-    free_memory = memory_info.free / (1024 ** 2)
+    total_memory = memory_info.total / (1024**2)
+    available_memory = memory_info.available / (1024**2)
+    used_memory = memory_info.used / (1024**2)
+    free_memory = memory_info.free / (1024**2)
 
     print(f"Available Memory: {available_memory:.2f} MB / {total_memory:.2f} MB")
     print(f"Used Memory: {used_memory:.2f} MB")
@@ -133,18 +142,25 @@ def print_memory_usage():
 
     return None
 
+
 # Set device
-device = "cuda" if t.cuda.is_available() else "cpu"
+DEVICE_MAP_DEFAULT = "mps"
+device = "cpu"
+if t.backends.mps.is_available():
+    device = "mps"
+if t.cuda.is_available():
+    device = "cuda"
+
 print("Selected device: ", device)
 
 # Load the token
-token_path = f"../tokens/{cfg.token_name}"
-access_token = load_token(token_path)
+# token_path = f"../tokens/{cfg.token_name}"
+# access_token = load_token(token_path)
 
 # set cache to load models
 env_vars = os.environ
-cache = None if 'COLAB_GPU' in env_vars else "../model_cache"
-cluster_identifier = ['t30', 'ge45leb', '/space/']
+cache = None if "COLAB_GPU" in env_vars else "../model_cache"
+cluster_identifier = ["t30", "ge45leb", "/space/"]
 
 # Iterate through environment variables and check if any value contains the substrings
 for key, value in env_vars.items():
@@ -155,7 +171,10 @@ for key, value in env_vars.items():
 
 # Load tokenizer + model (when PEFT is false use default)
 tokenizer = AutoTokenizer.from_pretrained(
-    cfg.model_id, token=access_token, trust_remote_code=True, cache_dir=cache
+    cfg.model_id,
+    # token=access_token,
+    trust_remote_code=True,
+    # cache_dir=cache
 )
 
 if cfg.model_id == cfg.model_ids[5]:
@@ -163,7 +182,7 @@ if cfg.model_id == cfg.model_ids[5]:
 
     quantization_config = AwqConfig(
         bits=4,
-        fuse_max_seq_len=512, # Note: Update this as per your use-case
+        fuse_max_seq_len=512,  # Note: Update this as per your use-case
         do_fuse=True,
     )
 
@@ -171,26 +190,26 @@ if cfg.model_id == cfg.model_ids[5]:
         cfg.model_id,
         torch_dtype=t.float16,  # use t.bfloat16
         low_cpu_mem_usage=True,
-        device_map="cpu",
-        quantization_config=quantization_config
+        device_map=DEVICE_MAP_DEFAULT,
+        quantization_config=quantization_config,
     )
 
 else:
     model = AutoModelForCausalLM.from_pretrained(
         cfg.model_id,
-        token=access_token,
-        device_map='cpu',  # to reduce GPU Ram usage
+        # token=access_token,
+        device_map=DEVICE_MAP_DEFAULT,  # to reduce GPU Ram usage
         torch_dtype=t.bfloat16,
         trust_remote_code=True,
-        cache_dir=cache,
+        # cache_dir=cache,
     )
 
 if cfg.config["PEFT"]:
-    print(f"Token being used: {access_token[:5]}...{access_token[-5:]}")
+    # print(f"Token being used: {access_token[:5]}...{access_token[-5:]}")
 
     # Add a single padding token if not already present
     if tokenizer.pad_token is None:
-        tokenizer.add_special_tokens({'pad_token': '<PAD>'})
+        tokenizer.add_special_tokens({"pad_token": "<PAD>"})
 
     model.config.pad_token_id = tokenizer.pad_token_id
 
@@ -206,10 +225,9 @@ with jsonlines.open(f"../data/{cfg.data_file_name}.jsonl") as reader:
 
 print(f"Loaded {len(data)} items from: {cfg.data_file_name}")
 
-
 # add to config dictionary
 cfg.config["device"] = device
-cfg.config["cache"] = cache
+# cfg.config["cache"] = cache
 
 if cfg.seeds is None:
     seeds = [random.randint(0, int(1e5)) for _ in range(cfg.n_trials)]
@@ -231,7 +249,9 @@ if password is not None:
     else:
         password = str(password)
 
-    assert isinstance(password, str), "Password is not a string, or list/tuple of strings."
+    assert isinstance(
+        password, str
+    ), "Password is not a string, or list/tuple of strings."
     cfg.config["password"] = password
 
 print(f"Initialization successful. Run {len(df)} experiments.")

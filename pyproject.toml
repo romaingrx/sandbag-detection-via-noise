@@ -1,0 +1,40 @@
+[project]
+name = "sandbag-detection-via-noise"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "einops",
+    # "flash-attn",
+    "jsonlines",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "psutil>=6.1.1",
+    # "peft",
+    "pynvml",
+    "pytest",
+    "requests",
+    "seaborn",
+    "tabulate",
+    #"tiktoken",
+    # "torch",
+    # "torchaudio",
+    # "torchvision",
+    "tqdm",
+    # "transformers",
+    # "triton>=3.1.0",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.8.6"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/nightly/cpu"
+explicit = true

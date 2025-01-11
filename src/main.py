@@ -1,18 +1,18 @@
 import numpy as np
 from tqdm import tqdm
+
 import config as cfg
+import helper_functions as hf
 import init
 from exp_setup import ExpSetup
-import sys
-import helper_functions as hf
+
 
 def main():
-
     # Initialize pandas data frame
     df = init.df
 
     if cfg.config["oneprompt"]:
-        df = df[df['Sandbag'] == 1]
+        df = df[df["Sandbag"] == 1]
 
     # Initialize the experimental setup
     exp = ExpSetup(init.model, init.tokenizer, init.data, cfg.config)
@@ -25,7 +25,6 @@ def main():
         exp.init_model_input(sys_prompt, password=False)
         print("Initiated system prompt:\n", sys_prompt)
 
-
     # sys_prompt = set_system_prompt(sandbag=False)
     # exp.init_model_input(sys_prompt, password=False)
     # print(sys_prompt)
@@ -36,10 +35,19 @@ def main():
     df = hf.fill_excluded_params(df, exp)
 
     # Loop over each experiment and fill measurements
-    with tqdm(total=df.shape[0], desc="Total Progress", bar_format='{l_bar}{bar:30}{r_bar}{bar:-30b}') as pbar:
+    with tqdm(
+        total=df.shape[0],
+        desc="Total Progress",
+        bar_format="{l_bar}{bar:30}{r_bar}{bar:-30b}",
+    ) as pbar:
         for idx, row in df[df["Sandbag"] == 0].iterrows():
-
-            exp_keys = ['Percentage', 'Noise Mean', 'Noise Std', 'Seed', 'Excluded Layer']
+            exp_keys = [
+                "Percentage",
+                "Noise Mean",
+                "Noise Std",
+                "Seed",
+                "Excluded Layer",
+            ]
             exp_parameters = {key: row[key] for key in exp_keys}
 
             mask = hf.construct_mask(exp_parameters, df)
@@ -47,7 +55,9 @@ def main():
             # Measure the accuracy for each prompt
             for prompt_idx in range(n_prompts):
                 res_exp = exp.measure_accuracy(prompt_idx=prompt_idx, **exp_parameters)
-                df.loc[(df['Sandbag'] == prompt_idx) & mask, ['dt', 'Accuracy']] = res_exp
+                df.loc[(df["Sandbag"] == prompt_idx) & mask, ["dt", "Accuracy"]] = (
+                    res_exp
+                )
 
             # reset noise
             exp.reset_model()
@@ -65,5 +75,5 @@ def main():
 if __name__ == "__main__":
     # single evaluation for repetition just repeat seed
     main()
-    #hf.create_saturated_benchmark()
+    # hf.create_saturated_benchmark()
     print("Done")
